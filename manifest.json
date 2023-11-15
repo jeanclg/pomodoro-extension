@@ -24,5 +24,6 @@
   ],
   "background": {
     "service_worker": "src/scripts/background.js"
-  }
+  },
+  "options_page": "src/public/options.html"
 }

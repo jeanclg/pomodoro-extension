@@ -1,39 +1,64 @@
-const elements = {
-  addTaskBtn: document.getElementById('add-task-btn'),
-  taskContainer: document.getElementById('task-container'),
-  startTimerBtn: document.getElementById('start-timer-btn'),
-  resetTimerBtn: document.getElementById('reset-timer-btn'),
-  time: document.getElementById('time'),
+let tasks = [];
+
+const addTask = () => {
+  const taskNum = tasks.length;
+  tasks.push('');
+  renderTask(taskNum);
+  saveTasks();
 };
 
-const updateTime = () => {
-  chrome.storage.local.get(['timer'], response => {
-    const minutes = `${25 - Math.ceil(response.timer / 60)}`.padStart(2, '0');
-    let seconds = '00';
-    if (response.timer % 60 !== 0) {
-      seconds = `${60 - (response.timer % 60)}`.padStart(2, '0');
-    }
-    elements.time.textContent = `${minutes}:${seconds}`;
-  });
-};
+function updateTime() {
+  chrome.storage.local.get(
+    ['timer', 'timeOption', 'isRunning'],
+    ({ timer, timeOption, isRunning }) => {
+      const time = document.getElementById('time');
+      const minutes = `${timeOption - Math.ceil(timer / 60)}`.padStart(2, '0');
+      const seconds = `${(60 - (timer % 60)) % 60}`.padStart(2, '0');
+      time.textContent = `${minutes}:${seconds}`;
+      startTimerBtn.textContent = isRunning ? 'Pause Timer' : 'Start Timer';
+    },
+  );
+}
 
 updateTime();
 setInterval(updateTime, 1000);
 
-let tasks = [];
+const startTimerBtn = document.getElementById('start-timer-btn');
+startTimerBtn.addEventListener('click', () => {
+  chrome.storage.local.get(['isRunning'], ({ isRunning }) => {
+    chrome.storage.local.set({ isRunning: !isRunning }, () => {
+      startTimerBtn.textContent = !isRunning ? 'Pause Timer' : 'Start Timer';
+    });
+  });
+});
 
-chrome.storage.sync.get(['tasks'], response => {
-  tasks = response.tasks ? response.tasks : [];
+const resetTimerBtn = document.getElementById('reset-timer-btn');
+resetTimerBtn.addEventListener('click', () => {
+  chrome.storage.local.set({ timer: 0, isRunning: false }, () => {
+    startTimerBtn.textContent = 'Start Timer';
+  });
+});
+
+const addTaskBtn = document.getElementById('add-task-btn');
+addTaskBtn.addEventListener('click', addTask);
+
+chrome.storage.sync.get(['tasks'], ({ tasks: storedTasks }) => {
+  tasks = storedTasks || [];
   renderTasks();
 });
 
+const saveTasks = () => {
+  chrome.storage.sync.set({ tasks });
+};
+
 const renderTask = taskNum => {
-  const row = document.createElement('div');
+  const taskRow = document.createElement('div');
 
   const text = document.createElement('input');
   text.type = 'text';
   text.placeholder = 'Enter a task...';
   text.value = tasks[taskNum];
+  text.className = 'task-input';
   text.addEventListener('change', () => {
     tasks[taskNum] = text.value;
     saveTasks();
@@ -42,24 +67,13 @@ const renderTask = taskNum => {
   const deleteBtn = document.createElement('input');
   deleteBtn.type = 'button';
   deleteBtn.value = 'X';
-  deleteBtn.addEventListener('click', () => {
-    deleteTask(taskNum);
-  });
+  deleteBtn.className = 'task-delete';
+  deleteBtn.addEventListener('click', () => deleteTask(taskNum));
 
-  row.appendChild(text);
-  row.appendChild(deleteBtn);
+  taskRow.appendChild(text);
+  taskRow.appendChild(deleteBtn);
 
-  elements.taskContainer.appendChild(row);
-};
-
-const saveTasks = () => {
-  chrome.storage.sync.set({ tasks });
-};
-
-const addTask = () => {
-  const taskNum = tasks.length;
-  tasks.push('');
-  renderTask(taskNum);
+  document.getElementById('task-container').appendChild(taskRow);
 };
 
 const deleteTask = taskNum => {
@@ -69,36 +83,7 @@ const deleteTask = taskNum => {
 };
 
 const renderTasks = () => {
-  taskContainerCurrent = document.getElementById('task-container');
-  taskContainerCurrent.textContent = '';
-  tasks.forEach((taskText, taskNum) => {
-    renderTask(taskNum);
-  });
+  const taskContainer = document.getElementById('task-container');
+  taskContainer.textContent = '';
+  tasks.forEach((taskText, taskNum) => renderTask(taskNum));
 };
-
-elements.addTaskBtn.addEventListener('click', addTask);
-
-elements.startTimerBtn.addEventListener('click', () => {
-  chrome.storage.local.get(['isRunning'], response => {
-    chrome.storage.local.set(
-      {
-        isRunning: !response.isRunning,
-      },
-      () => {
-        elements.startTimerBtn.textContent = !response.isRunning ? 'Pause Timer' : 'Start Timer';
-      },
-    );
-  });
-});
-
-elements.resetTimerBtn.addEventListener('click', () => {
-  chrome.storage.local.set(
-    {
-      timer: 0,
-      isRunning: false,
-    },
-    () => {
-      elements.startTimerBtn.textContent = 'Start Timer';
-    },
-  );
-});
