@@ -3,7 +3,22 @@ const elements = {
   taskContainer: document.getElementById('task-container'),
   startTimerBtn: document.getElementById('start-timer-btn'),
   resetTimerBtn: document.getElementById('reset-timer-btn'),
+  time: document.getElementById('time'),
 };
+
+const updateTime = () => {
+  chrome.storage.local.get(['timer'], response => {
+    const minutes = `${25 - Math.ceil(response.timer / 60)}`.padStart(2, '0');
+    let seconds = '00';
+    if (response.timer % 60 !== 0) {
+      seconds = `${60 - (response.timer % 60)}`.padStart(2, '0');
+    }
+    elements.time.textContent = `${minutes}:${seconds}`;
+  });
+};
+
+updateTime();
+setInterval(updateTime, 1000);
 
 let tasks = [];
 

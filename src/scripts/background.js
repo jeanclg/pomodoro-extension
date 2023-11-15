@@ -6,10 +6,19 @@ chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === 'pomodoroTimer') {
     chrome.storage.local.get(['timer', 'isRunning'], response => {
       if (response.isRunning) {
-        const timer = response.timer + 1;
-        console.log(timer);
+        let timer = response.timer + 1;
+        let isRunning = true;
+        if (timer === 10) {
+          this.registration.showNotification('Pomodoro Timer', {
+            body: '25 minutes has passed!',
+            icon: '../../images/icon.png',
+          });
+          timer = 0;
+          isRunning = false;
+        }
         chrome.storage.local.set({
           timer,
+          isRunning,
         });
       }
     });
